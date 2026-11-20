@@ -1,5 +1,4 @@
-# Imprime los primeros 10 numeros de Fibonacci usando ecall (SPIM/CPUlator)
-# Salida esperada: Fibonacci: 0 1 1 2 3 5 8 13 21 34
+
 .global _start
 _start:
     la   a0, msg          # a0 = direccion del string
