@@ -1,7 +1,3 @@
-// Simulador RISC-V RV32I - CS3051 Arquitectura de Computadores
-// Compilar: g++ -std=c++17 -O2 -Wall -o riscv-sim main.cpp
-// Uso:      ./riscv-sim programa.bin
-
 #include <array>
 #include <cstdint>
 #include <cstdio>
@@ -19,9 +15,7 @@ using u8 = uint8_t;
 using u32 = uint32_t;
 using i32 = int32_t;
 
-// ---------------------------------------------------------------------------
-// Memoria plana byte-addressable de 32 bits, little-endian (paginas bajo demanda)
-// ---------------------------------------------------------------------------
+
 class Memory {
     static constexpr u32 PAGE_BITS = 12;
     static constexpr u32 PAGE_SIZE = 1u << PAGE_BITS;
@@ -46,9 +40,6 @@ public:
     void clear() { pages.clear(); }
 };
 
-// ---------------------------------------------------------------------------
-// Utilidades de decodificacion
-// ---------------------------------------------------------------------------
 static const char* REG_NAMES[32] = {
     "zero", "ra", "sp", "gp", "tp", "t0", "t1", "t2", "s0", "s1", "a0",
     "a1",   "a2", "a3", "a4", "a5", "a6", "a7", "s2", "s3", "s4", "s5",
@@ -75,9 +66,7 @@ static inline i32 imm_j(u32 i) {
     return (i32)v;
 }
 
-// ---------------------------------------------------------------------------
-// Desensamblador
-// ---------------------------------------------------------------------------
+//desensamblador
 static std::string hex(u32 v) {
     char b[16];
     snprintf(b, sizeof b, "0x%x", v);
@@ -131,9 +120,7 @@ static std::string disasm(u32 inst, u32 pc) {
     return o.str();
 }
 
-// ---------------------------------------------------------------------------
-// CPU
-// ---------------------------------------------------------------------------
+//cpu
 enum class Status { Ok, Exited, Break, Error };
 
 struct Cpu {
@@ -149,26 +136,25 @@ struct Cpu {
 
     Status fail(const std::string& msg) { error = msg; return Status::Error; }
 
-    // ecall estilo SPIM/CPUlator (numero de servicio en a7)
     Status ecall() {
         switch (x[17]) {
-        case 1: printf("%d", (i32)x[10]); break;                  // print int
-        case 4: {                                                 // print string
+        case 1: printf("%d", (i32)x[10]); break;                  
+        case 4: {                                               
             for (u32 a = x[10]; mem.read8(a); a++) putchar(mem.read8(a));
             break;
         }
-        case 5: {                                                 // read int
+        case 5: {                                                
             long long v = 0;
             if (!(std::cin >> v)) v = 0;
             x[10] = (u32)v;
             break;
         }
-        case 11: putchar((char)x[10]); break;                     // print char
-        case 12: {                                                // read char
+        case 11: putchar((char)x[10]); break;                     
+        case 12: {                                               
             char c = 0; std::cin.get(c); x[10] = (u8)c; break;
         }
-        case 34: printf("0x%08x", x[10]); break;                  // print hex
-        case 36: printf("%u", x[10]); break;                      // print unsigned
+        case 34: printf("0x%08x", x[10]); break;                  
+        case 36: printf("%u", x[10]); break;                      
         case 10: exit_code = 0; fflush(stdout); return Status::Exited;
         case 17: case 93: exit_code = (int)x[10]; fflush(stdout); return Status::Exited;
         default: return fail("ecall no soportada: a7 = " + std::to_string(x[17]));
@@ -184,16 +170,16 @@ struct Cpu {
         u32 a = x[rs1], b = x[rs2];
 
         switch (opcode(inst)) {
-        case 0x37: set(rd, imm_u(inst)); break;                       // lui
-        case 0x17: set(rd, pc + imm_u(inst)); break;                  // auipc
-        case 0x6f: set(rd, next); next = pc + imm_j(inst); break;     // jal
-        case 0x67: {                                                  // jalr
+        case 0x37: set(rd, imm_u(inst)); break; //lui
+        case 0x17: set(rd, pc + imm_u(inst)); break; //auipc
+        case 0x6f: set(rd, next); next = pc + imm_j(inst); break; //jal
+        case 0x67: { //jalr
             u32 t = (a + imm_i(inst)) & ~1u;
             set(rd, next);
             next = t;
             break;
         }
-        case 0x63: {                                                  // branches
+        case 0x63: { //branches
             bool take;
             switch (f3) {
             case 0: take = a == b; break;
@@ -207,7 +193,7 @@ struct Cpu {
             if (take) next = pc + imm_b(inst);
             break;
         }
-        case 0x03: {                                                  // loads
+        case 0x03: {  //loads
             u32 addr = a + imm_i(inst);
             switch (f3) {
             case 0: set(rd, (u32)(i32)(int8_t)mem.read8(addr)); break;
@@ -219,7 +205,7 @@ struct Cpu {
             }
             break;
         }
-        case 0x23: {                                                  // stores
+        case 0x23: { //stores
             u32 addr = a + imm_s(inst);
             switch (f3) {
             case 0: mem.write8(addr, b & 0xff); break;
@@ -229,9 +215,9 @@ struct Cpu {
             }
             break;
         }
-        case 0x13: {                                                  // op-imm
+        case 0x13: {  //opimm
             i32 imm = imm_i(inst);
-            u32 sh = rs2;  // shamt = bits [24:20]
+            u32 sh = rs2;  
             switch (f3) {
             case 0: set(rd, a + imm); break;
             case 1: set(rd, a << sh); break;
@@ -244,7 +230,7 @@ struct Cpu {
             }
             break;
         }
-        case 0x33: {                                                  // op
+        case 0x33: {                                                 
             if (f7 != 0x00 && f7 != 0x20)
                 return fail("instruccion no soportada (extension M?) en " + hex(pc) + ": " + hex(inst));
             u32 sh = b & 0x1f;
@@ -260,14 +246,14 @@ struct Cpu {
             }
             break;
         }
-        case 0x0f: break;                                             // fence = nop
+        case 0x0f: break;  //es como un nop
         case 0x73: {
             if (imm_i(inst) == 0) {
                 Status s = ecall();
                 if (s != Status::Ok) return s;
             } else if (imm_i(inst) == 1) {
                 pc = next;
-                return Status::Break;                                 // ebreak
+                return Status::Break;                                 
             } else {
                 return fail("instruccion SYSTEM no soportada en " + hex(pc));
             }
@@ -281,9 +267,7 @@ struct Cpu {
     }
 };
 
-// ---------------------------------------------------------------------------
-// CLI
-// ---------------------------------------------------------------------------
+
 static bool parse_u32(const std::string& s, u32& out) {
     char* end;
     errno = 0;
@@ -335,7 +319,6 @@ static void print_help() {
          "  exit                sale");
 }
 
-// Imprime el resultado de ejecutar; devuelve true si la ejecucion debe detenerse.
 static bool report(Cpu& cpu, Status s) {
     switch (s) {
     case Status::Ok: return false;
@@ -397,7 +380,7 @@ int main(int argc, char** argv) {
                 Status s = cpu.step();
                 count++;
                 if (report(cpu, s)) break;
-                if (cpu.pc == prev) {  // la instruccion salta a si misma: fin tipico de programa
+                if (cpu.pc == prev) {  //la instruccion salta a si misma
                     printf("Loop infinito detectado en 0x%08x (%llu instrucciones). Fin.\n", cpu.pc, count);
                     break;
                 }
